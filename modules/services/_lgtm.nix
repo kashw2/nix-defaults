@@ -1,4 +1,4 @@
-{ lib, config, ... }:
+{ config, ... }:
 {
   services.loki."lgtm:loki".enable = true;
   services.prometheus."lgtm:prometheus".enable = true;
