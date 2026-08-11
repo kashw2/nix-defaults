@@ -24,7 +24,7 @@ in
 
   flake.processComposeModules = processComposeModules;
 
-  perSystem = { ... }: {
+  perSystem = _: {
     process-compose."default" = {
       imports = [
         inputs.services-flake.processComposeModules.default
