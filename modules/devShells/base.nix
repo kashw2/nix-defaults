@@ -1,6 +1,10 @@
 _: {
   perSystem =
-    { pkgs, self', ... }:
+    {
+      pkgs,
+      self',
+      ...
+    }:
     {
       devShells.base = pkgs.mkShell {
         # Ensure all consumers of this devShell get git-hooks

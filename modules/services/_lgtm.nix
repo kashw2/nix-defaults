@@ -1,13 +1,17 @@
 { config, ... }:
 {
   services.loki."lgtm:loki".enable = true;
-  services.prometheus."lgtm:prometheus".enable = true;
+  services.prometheus."lgtm:prometheus" = {
+    enable = true;
+    extraFlags = [ "--web.enable-otlp-receiver" ];
+  };
   services.tempo."lgtm:tempo" = { config, ... }: {
     enable = true;
     extraConfig = {
       # Tempo and pyroscope both default gRPC to 9095. Keep pyroscope on the
       # default (its internal metastore client hardcodes 9095) and move tempo.
       server.grpc_listen_port = 9097;
+      distributor.receivers.otlp.protocols.http.endpoint = "${config.httpAddress}:4318";
       # TODO: remove once merged: https://github.com/juspay/services-flake/pull/716
       live_store = {
         shutdown_marker_dir = "${config.dataDir}/live-store/shutdown-marker";

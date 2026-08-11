@@ -2,7 +2,7 @@ _: {
   perSystem =
     { pkgs, self', ... }:
     {
-      devShells.backend = pkgs.mkShell {
+      devShells.angular = pkgs.mkShell {
         # Ensure all consumers of this devShell get git-hooks
         inputsFrom = [
           self'.devShells.git-hooks
