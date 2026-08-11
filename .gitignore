@@ -1,3 +1,4 @@
 data/
 data-compactor/
 /result*
+/.pre-commit-config.yaml
