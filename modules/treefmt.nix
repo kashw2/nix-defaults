@@ -14,6 +14,7 @@ let
         programs.actionlint.enable = true;
         programs.dockerfmt.enable = true;
         programs.gofmt.enable = true;
+        programs.mdformat.enable = true;
         programs.shfmt.enable = true;
         programs.jsonfmt.enable = true;
         programs.terraform.enable = true;
