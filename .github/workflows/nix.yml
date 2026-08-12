@@ -1,0 +1,42 @@
+name: Nix
+on:
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  NIXPKGS_ALLOW_UNFREE: 1
+jobs:
+  # When nixpkgs or another input is updated that can change the output hash of a package that the devShells depend on
+  # we want to be able to test to know that they eval and can actually build a usable shell
+  devShell:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        devShell:
+          - base
+          - default
+          - git-hooks
+          - discipline-default
+          - framework-default
+          - language-default
+          - backend
+          - frontend
+          - devops
+          - angular
+          - ansible
+          - csharp
+          - golang
+          - nodejs
+          - terraform
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          save: ${{ matrix.devShell == 'default' }}
+      - run: nix develop --impure '.#${{ matrix.devShell }}' --command true
