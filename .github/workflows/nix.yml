@@ -11,7 +11,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
       - uses: nix-community/cache-nix-action@v7
         with:
@@ -43,7 +43,7 @@ jobs:
           - nodejs
           - terraform
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
       - uses: nix-community/cache-nix-action@v7
         with:
@@ -51,3 +51,22 @@ jobs:
           restore-prefixes-first-match: nix-${{ runner.os }}-
           save: ${{ matrix.devShell == 'default' }}
       - run: nix develop --impure '.#${{ matrix.devShell }}' --command true
+  services:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack:
+          - default
+          - lgtp
+          - telemetry
+          - openobserve
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          save: false
+      - run: nix run .#${{ matrix.stack }}
