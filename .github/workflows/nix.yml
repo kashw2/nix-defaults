@@ -53,14 +53,6 @@ jobs:
       - run: nix develop --impure '.#${{ matrix.devShell }}' --command true
   services:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        stack:
-          - default
-          - lgtp
-          - telemetry
-          - openobserve
     steps:
       - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
@@ -69,4 +61,4 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
           save: false
-      - run: nix run .#${{ matrix.stack }}
+      - run: nix run .#test
