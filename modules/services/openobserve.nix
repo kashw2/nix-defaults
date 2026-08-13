@@ -17,7 +17,6 @@
     process-compose.openobserve.imports = [
       inputs.services-flake.processComposeModules.default
       config.flake.processComposeModules.openobserve
-      ./_test.nix
     ];
   };
 }

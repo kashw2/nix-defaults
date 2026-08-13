@@ -43,7 +43,6 @@
     process-compose.telemetry.imports = [
       inputs.services-flake.processComposeModules.default
       config.flake.processComposeModules.telemetry
-      ./_test.nix
     ];
   };
 }
