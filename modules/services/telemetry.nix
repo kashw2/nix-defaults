@@ -18,8 +18,7 @@
         success_threshold = 1;
         failure_threshold = 30;
       };
-      services.grafana."lgtm:grafana" = {
-        enable = true;
+      services.grafana."lgtp:grafana" = {
         # Provision the rest of the lgtm stack as grafana data sources. URLs are
         # derived from each service's own listen address/port so they stay in sync.
         datasources =
