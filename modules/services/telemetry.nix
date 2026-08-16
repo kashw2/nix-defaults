@@ -217,6 +217,40 @@
               }
             ''
           }${
+            lib.optionalString (config.services.redis."database:redis".enable or false) ''
+
+              prometheus.exporter.redis "database" {
+                redis_addr = "127.0.0.1:${toString config.services.redis."database:redis".port}"
+              }
+
+              prometheus.scrape "database_redis" {
+                targets    = prometheus.exporter.redis.database.targets
+                forward_to = [${
+                  lib.concatStringsSep ", " (
+                    lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
+                    ) "prometheus.remote_write.default.receiver"
+                    ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                    ) "otelcol.receiver.prometheus.openobserve_self.receiver"
+                  )
+                }]
+              }
+
+              local.file_match "database_redis" {
+                path_targets = [{ __path__ = "${config.services.redis."database:redis".dataDir}/redis.log" }]
+              }
+
+              loki.source.file "database_redis" {
+                targets    = local.file_match.database_redis.targets
+                forward_to = [${
+                  lib.concatStringsSep ", " (
+                    lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
+                    ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                    ) "otelcol.receiver.loki.openobserve_self.receiver"
+                  )
+                }]
+              }
+            ''
+          }${
             lib.optionalString
               (
                 (config.services.prometheus."lgtp:prometheus".enable or false)
