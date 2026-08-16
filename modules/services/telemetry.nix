@@ -118,7 +118,7 @@
               prometheus.scrape "alloy_self" {
                 targets    = [{ __address__ = "${config.services.alloy."telemetry:alloy".listenAddress}:${
                   toString config.services.alloy."telemetry:alloy".port
-                }" }]
+                }", discipline = "${lib.head (lib.splitString ":" "telemetry:alloy")}", service = "${lib.last (lib.splitString ":" "telemetry:alloy")}" }]
                 forward_to = [prometheus.remote_write.default.receiver${
                   lib.optionalString (config.services.openobserve."openobserve".enable or false
                   ) ", otelcol.receiver.prometheus.openobserve_self.receiver"
@@ -189,6 +189,10 @@
 
               prometheus.scrape "database_postgresql" {
                 targets    = prometheus.exporter.postgres.database.targets
+                forward_to = [prometheus.relabel.database_postgresql.receiver]
+              }
+
+              prometheus.relabel "database_postgresql" {
                 forward_to = [${
                   lib.concatStringsSep ", " (
                     lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
@@ -197,6 +201,14 @@
                     ) "otelcol.receiver.prometheus.openobserve_self.receiver"
                   )
                 }]
+                rule {
+                  target_label = "discipline"
+                  replacement  = "${lib.head (lib.splitString ":" "database:postgresql")}"
+                }
+                rule {
+                  target_label = "service"
+                  replacement  = "${lib.last (lib.splitString ":" "database:postgresql")}"
+                }
               }
 
               local.file_match "database_postgresql" {
@@ -207,6 +219,10 @@
 
               loki.source.file "database_postgresql" {
                 targets    = local.file_match.database_postgresql.targets
+                forward_to = [loki.process.database_postgresql.receiver]
+              }
+
+              loki.process "database_postgresql" {
                 forward_to = [${
                   lib.concatStringsSep ", " (
                     lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
@@ -214,6 +230,12 @@
                     ) "otelcol.receiver.loki.openobserve_self.receiver"
                   )
                 }]
+                stage.static_labels {
+                  values = {
+                    discipline = "${lib.head (lib.splitString ":" "database:postgresql")}",
+                    service    = "${lib.last (lib.splitString ":" "database:postgresql")}",
+                  }
+                }
               }
             ''
           }${
@@ -225,6 +247,10 @@
 
               prometheus.scrape "database_redis" {
                 targets    = prometheus.exporter.redis.database.targets
+                forward_to = [prometheus.relabel.database_redis.receiver]
+              }
+
+              prometheus.relabel "database_redis" {
                 forward_to = [${
                   lib.concatStringsSep ", " (
                     lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
@@ -233,6 +259,14 @@
                     ) "otelcol.receiver.prometheus.openobserve_self.receiver"
                   )
                 }]
+                rule {
+                  target_label = "discipline"
+                  replacement  = "${lib.head (lib.splitString ":" "database:redis")}"
+                }
+                rule {
+                  target_label = "service"
+                  replacement  = "${lib.last (lib.splitString ":" "database:redis")}"
+                }
               }
 
               local.file_match "database_redis" {
@@ -241,6 +275,10 @@
 
               loki.source.file "database_redis" {
                 targets    = local.file_match.database_redis.targets
+                forward_to = [loki.process.database_redis.receiver]
+              }
+
+              loki.process "database_redis" {
                 forward_to = [${
                   lib.concatStringsSep ", " (
                     lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
@@ -248,6 +286,12 @@
                     ) "otelcol.receiver.loki.openobserve_self.receiver"
                   )
                 }]
+                stage.static_labels {
+                  values = {
+                    discipline = "${lib.head (lib.splitString ":" "database:redis")}",
+                    service    = "${lib.last (lib.splitString ":" "database:redis")}",
+                  }
+                }
               }
             ''
           }${
@@ -264,32 +308,32 @@
                       lib.optional (config.services.prometheus."lgtp:prometheus".enable or false)
                         ''{ __address__ = "${config.services.prometheus."lgtp:prometheus".listenAddress}:${
                           toString config.services.prometheus."lgtp:prometheus".port
-                        }", job = "prometheus" }''
+                        }", job = "prometheus", discipline = "${lib.head (lib.splitString ":" "lgtp:prometheus")}", service = "${lib.last (lib.splitString ":" "lgtp:prometheus")}" }''
                       ++
                         lib.optional (config.services.loki."lgtp:loki".enable or false)
                           ''{ __address__ = "${config.services.loki."lgtp:loki".httpAddress}:${
                             toString config.services.loki."lgtp:loki".httpPort
-                          }", job = "loki" }''
+                          }", job = "loki", discipline = "${lib.head (lib.splitString ":" "lgtp:loki")}", service = "${lib.last (lib.splitString ":" "lgtp:loki")}" }''
                       ++
                         lib.optional (config.services.tempo."lgtp:tempo".enable or false)
                           ''{ __address__ = "${config.services.tempo."lgtp:tempo".httpAddress}:${
                             toString config.services.tempo."lgtp:tempo".httpPort
-                          }", job = "tempo" }''
+                          }", job = "tempo", discipline = "${lib.head (lib.splitString ":" "lgtp:tempo")}", service = "${lib.last (lib.splitString ":" "lgtp:tempo")}" }''
                       ++
                         lib.optional (config.services.pyroscope."telemetry:pyroscope".enable or false)
                           ''{ __address__ = "${config.services.pyroscope."telemetry:pyroscope".httpAddress}:${
                             toString config.services.pyroscope."telemetry:pyroscope".httpPort
-                          }", job = "pyroscope" }''
+                          }", job = "pyroscope", discipline = "${lib.head (lib.splitString ":" "telemetry:pyroscope")}", service = "${lib.last (lib.splitString ":" "telemetry:pyroscope")}" }''
                       ++
                         lib.optional (config.services.grafana."lgtp:grafana".enable or false)
                           ''{ __address__ = "127.0.0.1:${
                             toString config.services.grafana."lgtp:grafana".http_port
-                          }", job = "grafana" }''
+                          }", job = "grafana", discipline = "${lib.head (lib.splitString ":" "lgtp:grafana")}", service = "${lib.last (lib.splitString ":" "lgtp:grafana")}" }''
                       ++
                         lib.optional (config.services.openobserve."openobserve".enable or false)
                           ''{ __address__ = "${config.services.openobserve."openobserve".httpAddress}:${
                             toString config.services.openobserve."openobserve".httpPort
-                          }", job = "openobserve" }''
+                          }", job = "openobserve", discipline = "${lib.head (lib.splitString ":" "openobserve")}", service = "${lib.last (lib.splitString ":" "openobserve")}" }''
                     )
                   }]
                   forward_to = [${
