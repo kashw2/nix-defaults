@@ -1,6 +1,6 @@
 { inputs, config, ... }:
 {
-  flake.processComposeModules.postgresql =
+  flake.processComposeModules.database =
     { config, pkgs, ... }:
     {
       services.postgres."database:postgresql" = {
@@ -14,6 +14,12 @@
           log_rotation_size = 0;
         };
       };
+      services.redis."database:redis" = {
+        enable = true;
+        extraConfig = ''
+          logfile redis.log
+        '';
+      };
       settings.processes.postgresql-test = with config.services.postgres."database:postgresql"; {
         command = pkgs.writeShellApplication {
           name = "postgresql-test";
@@ -23,14 +29,23 @@
           '';
         };
         depends_on."database:postgresql".condition = "process_healthy";
-
+      };
+      settings.processes.redis-test = with config.services.redis."database:redis"; {
+        command = pkgs.writeShellApplication {
+          name = "redis-test";
+          runtimeInputs = [ package ];
+          text = ''
+            redis-cli -p ${toString port} ping
+          '';
+        };
+        depends_on."database:redis".condition = "process_healthy";
       };
     };
 
   perSystem = _: {
-    process-compose.postgresql.imports = [
+    process-compose.database.imports = [
       inputs.services-flake.processComposeModules.default
-      config.flake.processComposeModules.postgresql
+      config.flake.processComposeModules.database
       ./_test.nix
     ];
   };
