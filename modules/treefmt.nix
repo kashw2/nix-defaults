@@ -5,7 +5,7 @@ let
       inputs.treefmt-nix.flakeModule
     ];
 
-    perSystem = _: {
+    perSystem = { config, ... }: {
       treefmt = {
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
@@ -19,6 +19,10 @@ let
         programs.jsonfmt.enable = true;
         programs.terraform.enable = true;
         programs.d2.enable = true;
+        # Defer to the specialized formatter when it owns the file type
+        programs.prettier.excludes =
+          (if config.treefmt.programs.mdformat.enable then [ "*.md" ] else [ ])
+          ++ (if config.treefmt.programs.jsonfmt.enable then [ "*.json" ] else [ ]);
       };
     };
   };
