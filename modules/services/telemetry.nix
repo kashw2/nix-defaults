@@ -295,6 +295,60 @@
               }
             ''
           }${
+            lib.optionalString (config.services.seaweedfs."storage:seaweedfs".enable or false) ''
+
+              prometheus.scrape "storage_seaweedfs" {
+                targets    = [{ __address__ = "${config.services.seaweedfs."storage:seaweedfs".host}:9494" }]
+                forward_to = [prometheus.relabel.storage_seaweedfs.receiver]
+              }
+
+              prometheus.relabel "storage_seaweedfs" {
+                forward_to = [${
+                  lib.concatStringsSep ", " (
+                    lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
+                    ) "prometheus.remote_write.default.receiver"
+                    ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                    ) "otelcol.receiver.prometheus.openobserve_self.receiver"
+                  )
+                }]
+                rule {
+                  target_label = "discipline"
+                  replacement  = "${lib.head (lib.splitString ":" "storage:seaweedfs")}"
+                }
+                rule {
+                  target_label = "service"
+                  replacement  = "${lib.last (lib.splitString ":" "storage:seaweedfs")}"
+                }
+              }
+
+              local.file_match "storage_seaweedfs" {
+                path_targets = [{ __path__ = "${
+                  config.services.seaweedfs."storage:seaweedfs".dataDir
+                }/seaweedfs.log" }]
+              }
+
+              loki.source.file "storage_seaweedfs" {
+                targets    = local.file_match.storage_seaweedfs.targets
+                forward_to = [loki.process.storage_seaweedfs.receiver]
+              }
+
+              loki.process "storage_seaweedfs" {
+                forward_to = [${
+                  lib.concatStringsSep ", " (
+                    lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
+                    ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                    ) "otelcol.receiver.loki.openobserve_self.receiver"
+                  )
+                }]
+                stage.static_labels {
+                  values = {
+                    discipline = "${lib.head (lib.splitString ":" "storage:seaweedfs")}",
+                    service    = "${lib.last (lib.splitString ":" "storage:seaweedfs")}",
+                  }
+                }
+              }
+            ''
+          }${
             lib.optionalString
               (
                 (config.services.prometheus."lgtp:prometheus".enable or false)
