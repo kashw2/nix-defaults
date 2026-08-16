@@ -212,6 +212,58 @@
                 }]
               }
             ''
+          }${
+            lib.optionalString
+              (
+                (config.services.prometheus."lgtp:prometheus".enable or false)
+                || (config.services.openobserve."openobserve".enable or false)
+              )
+              ''
+
+                prometheus.scrape "observability" {
+                  targets = [${
+                    lib.concatStringsSep ", " (
+                      lib.optional (config.services.prometheus."lgtp:prometheus".enable or false)
+                        ''{ __address__ = "${config.services.prometheus."lgtp:prometheus".listenAddress}:${
+                          toString config.services.prometheus."lgtp:prometheus".port
+                        }", job = "prometheus" }''
+                      ++
+                        lib.optional (config.services.loki."lgtp:loki".enable or false)
+                          ''{ __address__ = "${config.services.loki."lgtp:loki".httpAddress}:${
+                            toString config.services.loki."lgtp:loki".httpPort
+                          }", job = "loki" }''
+                      ++
+                        lib.optional (config.services.tempo."lgtp:tempo".enable or false)
+                          ''{ __address__ = "${config.services.tempo."lgtp:tempo".httpAddress}:${
+                            toString config.services.tempo."lgtp:tempo".httpPort
+                          }", job = "tempo" }''
+                      ++
+                        lib.optional (config.services.pyroscope."telemetry:pyroscope".enable or false)
+                          ''{ __address__ = "${config.services.pyroscope."telemetry:pyroscope".httpAddress}:${
+                            toString config.services.pyroscope."telemetry:pyroscope".httpPort
+                          }", job = "pyroscope" }''
+                      ++
+                        lib.optional (config.services.grafana."lgtp:grafana".enable or false)
+                          ''{ __address__ = "127.0.0.1:${
+                            toString config.services.grafana."lgtp:grafana".http_port
+                          }", job = "grafana" }''
+                      ++
+                        lib.optional (config.services.openobserve."openobserve".enable or false)
+                          ''{ __address__ = "${config.services.openobserve."openobserve".httpAddress}:${
+                            toString config.services.openobserve."openobserve".httpPort
+                          }", job = "openobserve" }''
+                    )
+                  }]
+                  forward_to = [${
+                    lib.concatStringsSep ", " (
+                      lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
+                      ) "prometheus.remote_write.default.receiver"
+                      ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                      ) "otelcol.receiver.prometheus.openobserve_self.receiver"
+                    )
+                  }]
+                }
+              ''
           }
         '';
       };
