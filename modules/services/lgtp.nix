@@ -61,6 +61,7 @@
             url = "http://${config.services.tempo."lgtp:tempo".httpAddress}:${
               toString config.services.tempo."lgtp:tempo".httpPort
             }";
+            jsonData.serviceMap.datasourceUid = "prometheus";
           }
         ];
       };

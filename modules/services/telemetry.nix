@@ -70,6 +70,10 @@
                   ) "otelcol.exporter.otlphttp.traces.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.prometheus."lgtp:prometheus".enable or false)
+                    || (config.services.openobserve."openobserve".enable or false)
+                  ) "otelcol.connector.servicegraph.default.input"
                 )
               }]
             }
@@ -262,6 +266,27 @@
                       ) "otelcol.receiver.prometheus.openobserve_self.receiver"
                     )
                   }]
+                }
+              ''
+          }${
+            lib.optionalString
+              (
+                (config.services.prometheus."lgtp:prometheus".enable or false)
+                || (config.services.openobserve."openobserve".enable or false)
+              )
+              ''
+
+                otelcol.connector.servicegraph "default" {
+                  output {
+                    metrics = [${
+                      lib.concatStringsSep ", " (
+                        lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
+                        ) "otelcol.exporter.otlphttp.metrics.input"
+                        ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                        ) "otelcol.exporter.otlphttp.openobserve.input"
+                      )
+                    }]
+                  }
                 }
               ''
           }
