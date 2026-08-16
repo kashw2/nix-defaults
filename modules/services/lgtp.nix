@@ -6,7 +6,10 @@
       services.loki."lgtp:loki".enable = true;
       services.prometheus."lgtp:prometheus" = {
         enable = true;
-        extraFlags = [ "--web.enable-otlp-receiver" ];
+        extraFlags = [
+          "--web.enable-otlp-receiver"
+          "--web.enable-remote-write-receiver"
+        ];
       };
       services.tempo."lgtp:tempo" =
         { config, ... }:
@@ -28,38 +31,38 @@
         enable = true;
         # Provision the rest of the lgtp stack as grafana data sources. URLs are
         # derived from each service's own listen address/port so they stay in sync.
-        datasources =
-          let
-            dsUrl = address: port: "http://${address}:${toString port}";
-          in
-          [
-            {
-              name = "Prometheus";
-              type = "prometheus";
-              access = "proxy";
-              uid = "prometheus";
-              url =
-                dsUrl config.services.prometheus."lgtp:prometheus".listenAddress
-                  config.services.prometheus."lgtp:prometheus".port;
-              isDefault = true;
-            }
-            {
-              name = "Loki";
-              type = "loki";
-              access = "proxy";
-              uid = "loki";
-              url = dsUrl config.services.loki."lgtp:loki".httpAddress config.services.loki."lgtp:loki".httpPort;
-            }
-            {
-              name = "Tempo";
-              type = "tempo";
-              access = "proxy";
-              uid = "tempo";
-              url =
-                dsUrl config.services.tempo."lgtp:tempo".httpAddress
-                  config.services.tempo."lgtp:tempo".httpPort;
-            }
-          ];
+        datasources = [
+          {
+            name = "Prometheus";
+            type = "prometheus";
+            access = "proxy";
+            uid = "prometheus";
+            url = "http://${config.services.prometheus."lgtp:prometheus".listenAddress}:${
+              toString config.services.prometheus."lgtp:prometheus".port
+            }";
+            isDefault = true;
+          }
+          {
+            name = "Loki";
+            type = "loki";
+            access = "proxy";
+            uid = "loki";
+            url = "http://${config.services.loki."lgtp:loki".httpAddress}:${
+              toString config.services.loki."lgtp:loki".httpPort
+            }";
+            jsonData.httpHeaderName1 = "X-Scope-OrgID";
+            secureJsonData.httpHeaderValue1 = "1";
+          }
+          {
+            name = "Tempo";
+            type = "tempo";
+            access = "proxy";
+            uid = "tempo";
+            url = "http://${config.services.tempo."lgtp:tempo".httpAddress}:${
+              toString config.services.tempo."lgtp:tempo".httpPort
+            }";
+          }
+        ];
       };
     };
 
