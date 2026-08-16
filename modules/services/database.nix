@@ -20,17 +20,18 @@
           logfile redis.log
         '';
       };
-      settings.processes.postgresql-test = with config.services.postgres."database:postgresql"; {
-        command = pkgs.writeShellApplication {
-          name = "postgresql-test";
-          runtimeInputs = [ package ];
-          text = ''
-            echo 'SELECT version();' | psql -U ${superuser} -h ${listen_addresses} -p ${toString port} postgres
-          '';
+      settings.processes."database:postgresql-test" =
+        with config.services.postgres."database:postgresql"; {
+          command = pkgs.writeShellApplication {
+            name = "postgresql-test";
+            runtimeInputs = [ package ];
+            text = ''
+              echo 'SELECT version();' | psql -U ${superuser} -h ${listen_addresses} -p ${toString port} postgres
+            '';
+          };
+          depends_on."database:postgresql".condition = "process_healthy";
         };
-        depends_on."database:postgresql".condition = "process_healthy";
-      };
-      settings.processes.redis-test = with config.services.redis."database:redis"; {
+      settings.processes."database:redis-test" = with config.services.redis."database:redis"; {
         command = pkgs.writeShellApplication {
           name = "redis-test";
           runtimeInputs = [ package ];
