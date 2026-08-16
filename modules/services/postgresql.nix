@@ -6,6 +6,13 @@
       services.postgres."database:postgresql" = {
         enable = true;
         superuser = "postgres";
+        settings = {
+          logging_collector = true;
+          log_directory = "log";
+          log_filename = "postgresql.log";
+          log_rotation_age = 0;
+          log_rotation_size = 0;
+        };
       };
       settings.processes.postgresql-test = with config.services.postgres."database:postgresql"; {
         command = pkgs.writeShellApplication {

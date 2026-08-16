@@ -126,11 +126,6 @@
                   toString config.services.prometheus."lgtp:prometheus".port
                 }/api/v1/write" }
               }
-              ${lib.optionalString (config.services.openobserve."openobserve".enable or false) ''
-                otelcol.receiver.prometheus "openobserve_self" {
-                  output { metrics = [otelcol.exporter.otlphttp.openobserve.input] }
-                }
-              ''}
             ''
           }${
             lib.optionalString (config.services.loki."lgtp:loki".enable or false) ''
@@ -152,11 +147,6 @@
                   tenant_id = "1"
                 }
               }
-              ${lib.optionalString (config.services.openobserve."openobserve".enable or false) ''
-                otelcol.receiver.loki "openobserve_self" {
-                  output { logs = [otelcol.exporter.otlphttp.openobserve.input] }
-                }
-              ''}
             ''
           }${
             lib.optionalString (config.services.openobserve."openobserve".enable or false) ''
@@ -174,6 +164,52 @@
                   auth = otelcol.auth.basic.openobserve.handler
                   tls { insecure = true }
                 }
+              }
+
+              otelcol.receiver.prometheus "openobserve_self" {
+                output { metrics = [otelcol.exporter.otlphttp.openobserve.input] }
+              }
+
+              otelcol.receiver.loki "openobserve_self" {
+                output { logs = [otelcol.exporter.otlphttp.openobserve.input] }
+              }
+            ''
+          }${
+            lib.optionalString (config.services.postgres."database:postgresql".enable or false) ''
+
+              prometheus.exporter.postgres "database" {
+                data_source_names = ["postgresql://${config.services.postgres."database:postgresql".superuser}@${
+                  config.services.postgres."database:postgresql".listen_addresses
+                }:${toString config.services.postgres."database:postgresql".port}/postgres?sslmode=disable"]
+              }
+
+              prometheus.scrape "database_postgresql" {
+                targets    = prometheus.exporter.postgres.database.targets
+                forward_to = [${
+                  lib.concatStringsSep ", " (
+                    lib.optional (config.services.prometheus."lgtp:prometheus".enable or false
+                    ) "prometheus.remote_write.default.receiver"
+                    ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                    ) "otelcol.receiver.prometheus.openobserve_self.receiver"
+                  )
+                }]
+              }
+
+              local.file_match "database_postgresql" {
+                path_targets = [{ __path__ = "${
+                  config.services.postgres."database:postgresql".dataDir
+                }/log/*.log" }]
+              }
+
+              loki.source.file "database_postgresql" {
+                targets    = local.file_match.database_postgresql.targets
+                forward_to = [${
+                  lib.concatStringsSep ", " (
+                    lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
+                    ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                    ) "otelcol.receiver.loki.openobserve_self.receiver"
+                  )
+                }]
               }
             ''
           }
