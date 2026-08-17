@@ -10,6 +10,7 @@ _: {
           self'.devShells.terraform
         ];
         packages = [
+          pkgs.docker
           pkgs.syft
           pkgs.grype
           pkgs.dive
