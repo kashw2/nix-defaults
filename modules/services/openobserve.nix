@@ -8,7 +8,10 @@
     imports = [
       (inputs.services-flake.lib.multiService ./_openobserve/openobserve.nix)
       (_: {
-        services.openobserve."openobserve".enable = true;
+        services.openobserve."openobserve" = {
+          enable = true;
+          extraEnvironment.ZO_COMPACT_DATA_RETENTION_DAYS = "7";
+        };
       })
     ];
   };
