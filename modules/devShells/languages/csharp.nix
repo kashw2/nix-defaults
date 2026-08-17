@@ -30,6 +30,26 @@ _: {
                 config.process-compose."default".services.alloy."telemetry:alloy".listenAddress
               }:4328/v1/metrics";
             }
+          else if (config.process-compose."default".services.openobserve."openobserve".enable or false) then
+            {
+              OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf";
+              OTEL_EXPORTER_OTLP_HEADERS = "Authorization=Basic YWRtaW5Ac2VydmljZXMtZmxha2UuY29tOkFkbWluMSFA";
+              OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "http://${
+                config.process-compose."default".services.openobserve."openobserve".httpAddress
+              }:${
+                toString config.process-compose."default".services.openobserve."openobserve".httpPort
+              }/api/default/v1/traces";
+              OTEL_EXPORTER_OTLP_LOGS_ENDPOINT = "http://${
+                config.process-compose."default".services.openobserve."openobserve".httpAddress
+              }:${
+                toString config.process-compose."default".services.openobserve."openobserve".httpPort
+              }/api/default/v1/logs";
+              OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = "http://${
+                config.process-compose."default".services.openobserve."openobserve".httpAddress
+              }:${
+                toString config.process-compose."default".services.openobserve."openobserve".httpPort
+              }/api/default/v1/metrics";
+            }
           else
             lib.optionalAttrs
               (
