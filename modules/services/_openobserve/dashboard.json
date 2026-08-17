@@ -1,0 +1,19 @@
+{
+  "version": 5,
+  "dashboardId": "test",
+  "title": "Test",
+  "description": "Sample dashboard used to exercise provisioning.",
+  "role": "",
+  "owner": "",
+  "created": "2026-08-17T00:00:00.000Z",
+  "tabs": [
+    {
+      "tabId": "default",
+      "name": "Default",
+      "panels": []
+    }
+  ],
+  "variables": {
+    "list": []
+  }
+}
