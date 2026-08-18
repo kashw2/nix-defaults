@@ -8,10 +8,6 @@
       ...
     }:
     {
-      imports = [
-        (inputs.services-flake.lib.multiService ./_alloy/alloy.nix)
-      ];
-
       services.alloy."telemetry:alloy" = {
         enable = true;
         extraFlags = [
