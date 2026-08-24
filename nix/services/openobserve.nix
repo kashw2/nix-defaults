@@ -67,6 +67,7 @@
       inputs.services-flake.processComposeModules.default
       config.flake.processComposeModules.openobserve
       { openobserve.dashboards = [ ./_openobserve/dashboard.json ]; }
+      ./_test.nix
     ];
   };
 }
