@@ -71,6 +71,7 @@
     process-compose.lgtp.imports = [
       inputs.services-flake.processComposeModules.default
       config.flake.processComposeModules.lgtp
+      ./_test.nix
     ];
   };
 }
