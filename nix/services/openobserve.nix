@@ -24,7 +24,10 @@
           config = {
             services.openobserve."openobserve" = {
               enable = true;
-              extraEnvironment.ZO_COMPACT_DATA_RETENTION_DAYS = "7";
+              extraEnvironment = {
+                ZO_COMPACT_DATA_RETENTION_DAYS = "7";
+                ZO_RUM_ENABLED = "true";
+              };
             };
 
             settings.processes."openobserve-dashboard" = lib.mkIf (config.openobserve.dashboards != [ ]) (
