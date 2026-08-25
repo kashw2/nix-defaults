@@ -421,7 +421,13 @@
         '';
       };
 
-      services.pyroscope."telemetry:pyroscope".enable = true;
+      services.pyroscope."telemetry:pyroscope" = {
+        enable = true;
+        # Without setting the addr to the loopback it fails in the nix sandbox
+        extraFlags = [
+          "-segment-writer.lifecycler.addr=${config.services.pyroscope."telemetry:pyroscope".httpAddress}"
+        ];
+      };
       # TODO: remove once merged: https://github.com/juspay/services-flake/pull/715
       settings.processes."telemetry:pyroscope".readiness_probe = lib.mkForce {
         http_get = {
@@ -458,6 +464,7 @@
     process-compose.telemetry.imports = [
       inputs.services-flake.processComposeModules.default
       config.flake.processComposeModules.telemetry
+      ./_test.nix
     ];
   };
 }
