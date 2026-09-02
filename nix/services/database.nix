@@ -68,6 +68,7 @@
             })
             // {
               "database:clickhouse-test" = with config.services.clickhouse."database:clickhouse"; {
+                namespace = config.services.clickhouse."database:clickhouse".namespace;
                 environment.TZ = "UTC";
                 command = pkgs.writeShellApplication {
                   name = "clickhouse-test";
