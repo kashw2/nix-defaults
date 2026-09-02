@@ -24,6 +24,11 @@
       description = "Port the app's HTTP server listens on.";
     };
 
+    admin = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      description = "Admin account provisioned at startup.";
+    };
+
     extraEnvironment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
