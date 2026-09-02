@@ -39,7 +39,6 @@
         PROBE_KEY = "oneuptime-probe";
         PROBE_NAME = name;
         ONEUPTIME_URL = config.oneuptimeUrl;
-        PROBE_ALLOW_PRIVATE_NETWORK_MONITORS = "false";
       }
       // config.extraEnvironment;
 

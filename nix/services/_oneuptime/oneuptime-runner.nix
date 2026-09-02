@@ -40,7 +40,6 @@
         ONEUPTIME_RUNNER_KEY = "oneuptime-runner";
         ONEUPTIME_RUNNER_NAME = name;
         ONEUPTIME_RUNNER_ENABLE_CODE_FIXES = "false";
-        ONEUPTIME_RUNNER_ENABLE_RUNBOOKS = "false";
       }
       // config.extraEnvironment;
 
