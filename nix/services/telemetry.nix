@@ -345,6 +345,64 @@
               }
             ''
           }${
+            lib.concatMapStrings
+              (
+                tail:
+                lib.optionalString tail.enable ''
+
+                  local.file_match "${tail.id}" {
+                    path_targets = [{ __path__ = "${tail.path}" }]
+                  }
+
+                  loki.source.file "${tail.id}" {
+                    targets    = local.file_match.${tail.id}.targets
+                    forward_to = [loki.process.${tail.id}.receiver]
+                  }
+
+                  loki.process "${tail.id}" {
+                    forward_to = [${
+                      lib.concatStringsSep ", " (
+                        lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
+                        ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                        ) "otelcol.receiver.loki.openobserve_self.receiver"
+                      )
+                    }]
+                    stage.static_labels {
+                      values = {
+                        discipline = "${lib.head (lib.splitString ":" tail.process)}",
+                        service    = "${lib.last (lib.splitString ":" tail.process)}",
+                      }
+                    }
+                  }
+                ''
+              )
+              [
+                {
+                  id = "oneuptime_app";
+                  process = "oneuptime:app";
+                  enable = config.services.oneuptime-app."oneuptime:app".enable or false;
+                  path = config.settings.processes."oneuptime:app".log_location;
+                }
+                {
+                  id = "oneuptime_runner";
+                  process = "oneuptime:runner";
+                  enable = config.services.oneuptime-runner."oneuptime:runner".enable or false;
+                  path = config.settings.processes."oneuptime:runner".log_location;
+                }
+                {
+                  id = "oneuptime_probe";
+                  process = "oneuptime:probe-1";
+                  enable = config.services.oneuptime-probe."oneuptime:probe-1".enable or false;
+                  path = config.settings.processes."oneuptime:probe-1".log_location;
+                }
+                {
+                  id = "proxies_nginx";
+                  process = "proxies:nginx";
+                  enable = config.services.nginx."proxies:nginx".enable or false;
+                  path = config.settings.processes."proxies:nginx".log_location;
+                }
+              ]
+          }${
             lib.optionalString
               (
                 (config.services.prometheus."lgtp:prometheus".enable or false)
