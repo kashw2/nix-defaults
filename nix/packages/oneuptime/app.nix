@@ -89,6 +89,10 @@ _: {
         npm_config_nodedir = "${pkgs.nodejs_26}";
 
         preBuild = ''
+          find App Common -type f \( -name '*.ts' -o -name '*.ejs' \) \
+            -not -path '*/node_modules/*' -not -path '*/Tests/*' \
+            -exec sed -i "s#/usr/src/app#$out/app#g; s#/usr/src/Common#$out/Common#g" {} +
+
           export HOME=$NIX_BUILD_TOP/home
           export npm_config_cache=$NIX_BUILD_TOP/npm-cache
           mkdir -p $HOME $npm_config_cache
