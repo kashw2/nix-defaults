@@ -37,6 +37,12 @@ self:
               default = "name";
               description = "Field records are looked up by, to create or update.";
             };
+
+            createOmit = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Fields the API refuses on create, held back and written by the update that follows it.";
+            };
           };
         }
       )
