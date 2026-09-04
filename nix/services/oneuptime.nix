@@ -189,9 +189,7 @@
         };
 
         "oneuptime:app" = {
-          environment = {
-            RUN_DATABASE_MIGRATIONS_ON_BOOT = "false";
-          };
+          environment.RUN_DATABASE_MIGRATIONS_ON_BOOT = "false";
           log_location = "${config.services.oneuptime-app."oneuptime:app".dataDir}/app.log";
         };
 
@@ -257,7 +255,7 @@
           with config.services.oneuptime-app."oneuptime:app";
           with extraEnvironment;
           {
-            namespace = config.services.oneuptime-app."oneuptime:app".namespace;
+            inherit namespace;
             command = pkgs.writeShellApplication {
               name = "oneuptime-provision";
               runtimeInputs = [
@@ -304,7 +302,7 @@
           };
 
         "oneuptime:provision-test" = with config.services.oneuptime-app."oneuptime:app"; {
-          namespace = config.services.oneuptime-app."oneuptime:app".namespace;
+          inherit namespace;
           command = pkgs.writeShellApplication {
             name = "oneuptime-provision-test";
             runtimeInputs = [

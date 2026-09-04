@@ -1,21 +1,16 @@
-_: {
+{ config, ... }:
+{
   perSystem =
-    { pkgs, lib, ... }:
+    { pkgs, ... }:
     {
       packages.oneuptime-app = pkgs.stdenv.mkDerivation (finalAttrs: {
         pname = "oneuptime-app";
-        version = "12.0.28";
+        inherit (config.flake.lib.oneuptime pkgs) version;
 
-        src = pkgs.stdenv.mkDerivation (nodeModules: {
+        src = pkgs.stdenv.mkDerivation (_: {
           pname = "oneuptime-app-node-modules";
           inherit (finalAttrs) version;
-
-          src = pkgs.fetchFromGitHub {
-            owner = "OneUptime";
-            repo = "oneuptime";
-            tag = nodeModules.version;
-            hash = "sha256-vOLlBXJL6/7fNgkDm5DYpfMtE2fEGywzts1m4Gtd5Jk=";
-          };
+          inherit (config.flake.lib.oneuptime pkgs) src;
 
           nativeBuildInputs = [ pkgs.nodejs_26 ];
 
@@ -151,11 +146,8 @@ _: {
           PRODUCTION = "true";
         };
 
-        meta = {
+        meta = (config.flake.lib.oneuptime pkgs).meta // {
           description = "OneUptime app monolith — dashboard, API, workers and telemetry ingestion";
-          homepage = "https://oneuptime.com";
-          license = lib.licenses.asl20;
-          platforms = lib.platforms.unix;
         };
       });
     };
