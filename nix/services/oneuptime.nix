@@ -18,6 +18,7 @@
         (inputs.services-flake.lib.multiService ./_oneuptime/oneuptime-runner.nix)
         (inputs.services-flake.lib.multiService ./_oneuptime/oneuptime-probe.nix)
         (import ./_oneuptime/provisioning.nix self)
+        (import ./_oneuptime/monitor-probe.nix self)
       ];
 
       services.clickhouse."database:clickhouse" = {
