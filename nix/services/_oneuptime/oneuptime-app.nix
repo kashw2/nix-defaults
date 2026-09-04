@@ -9,19 +9,19 @@
   options = {
     package = lib.mkOption {
       type = lib.types.package;
-      description = "The OneUptime app package to run.";
+      description = "Package to run.";
     };
 
     listenAddress = lib.mkOption {
       type = lib.types.str;
       default = "127.0.0.1";
-      description = "Address the app is reached on, for its readiness probe and self-referencing URLs.";
+      description = "Address the app is reached on.";
     };
 
     port = lib.mkOption {
       type = lib.types.port;
       default = 3002;
-      description = "Port the app's HTTP server listens on.";
+      description = "Port the HTTP server listens on.";
     };
 
     admin = lib.mkOption {

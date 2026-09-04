@@ -1,17 +1,11 @@
-_: {
+{ config, ... }:
+{
   perSystem =
-    { pkgs, lib, ... }:
+    { pkgs, ... }:
     {
       packages.oneuptime-ingress = pkgs.stdenv.mkDerivation (finalAttrs: {
         pname = "oneuptime-ingress";
-        version = "12.0.28";
-
-        src = pkgs.fetchFromGitHub {
-          owner = "OneUptime";
-          repo = "oneuptime";
-          tag = finalAttrs.version;
-          hash = "sha256-vOLlBXJL6/7fNgkDm5DYpfMtE2fEGywzts1m4Gtd5Jk=";
-        };
+        inherit (config.flake.lib.oneuptime pkgs) version src;
 
         nativeBuildInputs = [
           pkgs.gettext
@@ -74,11 +68,8 @@ _: {
           nginx -t -p . -c check.conf -e stderr
         '';
 
-        meta = {
+        meta = (config.flake.lib.oneuptime pkgs).meta // {
           description = "OneUptime nginx ingress configuration, for an nginx http block";
-          homepage = "https://oneuptime.com";
-          license = lib.licenses.asl20;
-          platforms = lib.platforms.unix;
         };
       });
     };
