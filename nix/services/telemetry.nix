@@ -50,6 +50,10 @@
                   ) "otelcol.exporter.otlphttp.metrics.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.oneuptime-app."oneuptime:app".enable or false)
+                    && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+                  ) "otelcol.exporter.otlphttp.oneuptime.input"
                 )
               }]
               logs    = [${
@@ -58,6 +62,10 @@
                   ) "otelcol.exporter.otlphttp.logs.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.oneuptime-app."oneuptime:app".enable or false)
+                    && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+                  ) "otelcol.exporter.otlphttp.oneuptime.input"
                 )
               }]
               traces  = [${
@@ -66,6 +74,10 @@
                   ) "otelcol.exporter.otlphttp.traces.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.oneuptime-app."oneuptime:app".enable or false)
+                    && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+                  ) "otelcol.exporter.otlphttp.oneuptime.input"
                   ++ lib.optional (
                     (config.services.prometheus."lgtp:prometheus".enable or false)
                     || (config.services.openobserve."openobserve".enable or false)
@@ -475,25 +487,48 @@
                   }
                 }
               ''
+          }${
+            lib.optionalString
+              (
+                (config.services.oneuptime-app."oneuptime:app".enable or false)
+                && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+              )
+              ''
+
+                otelcol.exporter.otlphttp "oneuptime" {
+                  client {
+                    endpoint = "http://${config.services.oneuptime-app."oneuptime:app".listenAddress}:${
+                      toString config.services.oneuptime-app."oneuptime:app".port
+                    }/otlp"
+                    headers  = { "x-oneuptime-token" = "${
+                      config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey
+                    }" }
+                    tls { insecure = true }
+                  }
+                }
+
+                pyroscope.receive_http "oneuptime" {
+                  http {
+                    listen_address = "${config.services.alloy."telemetry:alloy".listenAddress}"
+                    listen_port    = 4329
+                  }
+                  forward_to = [pyroscope.write.oneuptime.receiver]
+                }
+
+                pyroscope.write "oneuptime" {
+                  endpoint {
+                    url          = "http://${config.services.oneuptime-app."oneuptime:app".listenAddress}:${
+                      toString config.services.oneuptime-app."oneuptime:app".port
+                    }/pyroscope"
+                    bearer_token = "${config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey}"
+                  }
+                }
+              ''
           }
         '';
       };
 
       services.pyroscope."telemetry:pyroscope".enable = true;
-      # TODO: remove once merged: https://github.com/juspay/services-flake/pull/715
-      settings.processes."telemetry:pyroscope".readiness_probe = lib.mkForce {
-        http_get = {
-          host = "127.0.0.1";
-          scheme = "http";
-          port = 4040;
-          path = "/ready";
-        };
-        initial_delay_seconds = 30;
-        period_seconds = 10;
-        timeout_seconds = 2;
-        success_threshold = 1;
-        failure_threshold = 30;
-      };
       services.grafana."lgtp:grafana" = {
         enable = true;
         # Provision the rest of the lgtp stack as grafana data sources. URLs are
