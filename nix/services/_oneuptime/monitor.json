@@ -1,5 +1,5 @@
 {
   "name": "Ingress",
   "description": "Sample monitor used to exercise provisioning.",
-  "monitorType": "Manual"
+  "monitorType": "Website"
 }
