@@ -29,6 +29,13 @@
       description = "Admin account provisioned at startup.";
     };
 
+    telemetryIngestionKey = lib.mkOption {
+      type = lib.types.str;
+      default = "6f2a1d84-9b3c-4e57-8a10-c4d2e5f70b93";
+      readOnly = true;
+      description = "Key other services send OpenTelemetry data in with. Provisioned with the app, to reference rather than set.";
+    };
+
     extraEnvironment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };

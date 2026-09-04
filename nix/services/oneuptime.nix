@@ -67,6 +67,25 @@
 
       services.postgres."database:postgresql".initialDatabases = [ { name = "oneuptimedb"; } ];
 
+      oneuptime.provisioning = {
+        project.sources = [ ./_oneuptime/project.json ];
+
+        telemetry-ingestion-key = {
+          createOmit = [ "secretKey" ];
+          sources = [
+            (pkgs.writeText "oneuptime-telemetry-ingestion-key.json" (
+              builtins.toJSON {
+                name = "Default";
+                secretKey = {
+                  _type = "ObjectID";
+                  value = config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey;
+                };
+              }
+            ))
+          ];
+        };
+      };
+
       services.oneuptime-app."oneuptime:app" = with config.services.oneuptime-app."oneuptime:app"; {
         package = self.packages.${pkgs.stdenv.hostPlatform.system}.oneuptime-app;
         enable = true;
@@ -357,7 +376,6 @@
         config.flake.processComposeModules.oneuptime
         {
           oneuptime.provisioning = {
-            project.sources = [ ./_oneuptime/project.json ];
             monitor.sources = [ ./_oneuptime/monitor.json ];
             dashboard.sources = [ ./_oneuptime/dashboard.json ];
           };
