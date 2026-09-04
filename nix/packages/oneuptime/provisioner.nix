@@ -126,14 +126,23 @@ _: {
               'walk(if type == "object" and has("$ref") then $map[(.["$ref"] | tojson)] else . end)' <<<"$json"
           }
 
+          fetch_stored() {
+            api_post "/$1/get-list" "$2" \
+              "$(jq -nc --arg field "$3" --arg value "$4" \
+                --argjson select "$(jq -c '[keys[] | {(.): true}] | add + {_id: true}' <<<"$5")" \
+                '{query: {($field): $value}, select: $select, limit: 1, skip: 0}')" \
+              | jq -c '.data[0] // {}'
+          }
+
           provision() {
-            local fields kind identifier project source scope data value id stored changes
+            local fields kind identifier project source create_omit scope data value id stored changes
 
             mapfile -t fields < <(jq -r '.kind, .identifier, .project, .source' <<<"$1")
             kind=''${fields[0]}
             identifier=''${fields[1]}
             project=''${fields[2]}
             source=''${fields[3]}
+            create_omit=$(jq -c '.createOmit' <<<"$1")
 
             scope=$(scope_for "$project" "" "$source") || return $?
             data=$(resolve "$source" "$scope") || return $?
@@ -147,20 +156,13 @@ _: {
 
             id=$(lookup "/$kind" "$scope" "$identifier" "$value") || return 1
 
-            stored='{}'
-            if [ -n "$id" ]; then
-              stored=$(api_post "/$kind/get-list" "$scope" \
-                "$(jq -nc --arg field "$identifier" --arg value "$value" \
-                  --argjson select "$(jq -c '[keys[] | {(.): true}] | add + {_id: true}' <<<"$data")" \
-                  '{query: {($field): $value}, select: $select, limit: 1, skip: 0}')" \
-                | jq -c '.data[0] // {}') || return 1
-            fi
-
             if [ "$check" -eq 1 ]; then
               if [ -z "$id" ]; then
                 echo "provisioning: $kind $value was never created" >&2
                 return 1
               fi
+
+              stored=$(fetch_stored "$kind" "$scope" "$identifier" "$value" "$data") || return 1
 
               if grep -qF '"$ref"' <<<"$stored"; then
                 echo "provisioning: $kind $value kept an unresolved reference" >&2
@@ -171,9 +173,18 @@ _: {
             fi
 
             if [ -z "$id" ]; then
-              api_post "/$kind" "$scope" "$(jq -nc --argjson data "$data" '{data: $data}')" > /dev/null || return 1
-              return 0
+              api_post "/$kind" "$scope" \
+                "$(jq -nc --argjson data "$data" --argjson omit "$create_omit" \
+                  '{data: ($data | delpaths([$omit[] | [.]]))}')" > /dev/null || return 1
+
+              if [ "$create_omit" = "[]" ]; then
+                return 0
+              fi
+
+              id=$(lookup "/$kind" "$scope" "$identifier" "$value") || return 1
             fi
+
+            stored=$(fetch_stored "$kind" "$scope" "$identifier" "$value" "$data") || return 1
 
             changes=$(jq -nc --argjson data "$data" --argjson stored "$stored" \
               '[$data | to_entries[] | select($stored[.key] != .value)] | from_entries')
@@ -186,7 +197,7 @@ _: {
               "$(jq -nc --argjson changes "$changes" '{data: $changes}')" > /dev/null || return 1
           }
 
-          mapfile -t pending < <(jq -c '.[] as $entry | $entry.sources[] | {kind: $entry.kind, identifier: $entry.identifier, project: ($entry.project // ""), source: .}' "$manifest")
+          mapfile -t pending < <(jq -c '.[] as $entry | $entry.sources[] | {kind: $entry.kind, identifier: $entry.identifier, project: ($entry.project // ""), createOmit: $entry.createOmit, source: .}' "$manifest")
 
           while [ "''${#pending[@]}" -gt 0 ]; do
             deferred=()
