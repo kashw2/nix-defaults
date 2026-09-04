@@ -88,6 +88,9 @@
             -not -path '*/node_modules/*' -not -path '*/Tests/*' \
             -exec sed -i "s#/usr/src/app#$out/app#g; s#/usr/src/Common#$out/Common#g" {} +
 
+          substituteInPlace App/FeatureSet/Dashboard/src/Components/SessionReplay/ReplayStage.tsx \
+            --replace-fail "img-src data: blob:;" "img-src data: blob: http: https:;"
+
           export HOME=$NIX_BUILD_TOP/home
           export npm_config_cache=$NIX_BUILD_TOP/npm-cache
           mkdir -p $HOME $npm_config_cache
