@@ -17,6 +17,7 @@
         (inputs.services-flake.lib.multiService ./_oneuptime/oneuptime-app.nix)
         (inputs.services-flake.lib.multiService ./_oneuptime/oneuptime-runner.nix)
         (inputs.services-flake.lib.multiService ./_oneuptime/oneuptime-probe.nix)
+        (import ./_oneuptime/provisioning.nix self)
       ];
 
       services.clickhouse."database:clickhouse" = {
@@ -356,6 +357,13 @@
         config.flake.processComposeModules.database
         config.flake.processComposeModules.proxies
         config.flake.processComposeModules.oneuptime
+        {
+          oneuptime.provisioning = {
+            project.sources = [ ./_oneuptime/project.json ];
+            monitor.sources = [ ./_oneuptime/monitor.json ];
+            dashboard.sources = [ ./_oneuptime/dashboard.json ];
+          };
+        }
         ./_test.nix
       ];
 
