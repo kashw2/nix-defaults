@@ -1,0 +1,35 @@
+{
+  "name": "Overview",
+  "description": "Sample dashboard used to exercise provisioning.",
+  "dashboardViewConfig": {
+    "_type": "DashboardViewConfig",
+    "heightInDashboardUnits": 60,
+    "components": [
+      {
+        "_type": "DashboardComponent",
+        "componentId": {
+          "_type": "ObjectID",
+          "value": "2f9f4b3a-3d5e-4c31-9a4c-6f9c1b0d5f21"
+        },
+        "componentType": "IncidentList",
+        "topInDashboardUnits": 0,
+        "leftInDashboardUnits": 0,
+        "widthInDashboardUnits": 12,
+        "heightInDashboardUnits": 8,
+        "minWidthInDashboardUnits": 4,
+        "minHeightInDashboardUnits": 4,
+        "arguments": {
+          "title": "Incidents",
+          "monitorIds": [
+            {
+              "$ref": {
+                "kind": "monitor",
+                "name": "Ingress"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
