@@ -91,6 +91,13 @@
           substituteInPlace App/FeatureSet/Dashboard/src/Components/SessionReplay/ReplayStage.tsx \
             --replace-fail "img-src data: blob:;" "img-src data: blob: http: https:;"
 
+          substituteInPlace App/FeatureSet/Telemetry/Services/OtelProfilesIngestService.ts \
+            --replace-fail 'const date: Date = OneUptimeDate.fromUnixNano(numericValue);' 'let date: Date = OneUptimeDate.fromUnixNano(numericValue); if (Number.isNaN(date.getTime())) { numericValue = OneUptimeDate.getCurrentDateAsUnixNano(); date = OneUptimeDate.fromUnixNano(numericValue); }'
+
+          substituteInPlace App/FeatureSet/Telemetry/Services/PyroscopeIngestService.ts \
+            --replace-fail '? fromSeconds * 1_000_000_000' '? (fromSeconds >= 1e15 ? fromSeconds : fromSeconds * 1_000_000_000)' \
+            --replace-fail '? untilSeconds * 1_000_000_000' '? (untilSeconds >= 1e15 ? untilSeconds : untilSeconds * 1_000_000_000)'
+
           export HOME=$NIX_BUILD_TOP/home
           export npm_config_cache=$NIX_BUILD_TOP/npm-cache
           mkdir -p $HOME $npm_config_cache
