@@ -98,6 +98,15 @@
             --replace-fail '? fromSeconds * 1_000_000_000' '? (fromSeconds >= 1e15 ? fromSeconds : fromSeconds * 1_000_000_000)' \
             --replace-fail '? untilSeconds * 1_000_000_000' '? (untilSeconds >= 1e15 ? untilSeconds : untilSeconds * 1_000_000_000)'
 
+          for exceptionsView in \
+            App/FeatureSet/Dashboard/src/Components/Exceptions/ExceptionsDashboard.tsx \
+            App/FeatureSet/Dashboard/src/Components/Exceptions/ExceptionsTable.tsx
+          do
+            substituteInPlace "$exceptionsView" \
+              --replace-fail 'import Service from "Common/Models/DatabaseModels/Service";' 'import Service from "Common/Models/DatabaseModels/Service"; import RumApplication from "Common/Models/DatabaseModels/RumApplication";' \
+              --replace-fail 'setServices(result.data);' 'const rumResult: ListResult<RumApplication> = await ModelAPI.getList<RumApplication>({ modelType: RumApplication, query: { projectId: ProjectUtil.getCurrentProjectId()! }, select: { _id: true, name: true }, sort: { name: SortOrder.Ascending }, skip: 0, limit: LIMIT_PER_PROJECT }); setServices([...result.data, ...rumResult.data.map((app: RumApplication): Service => { const rumService: Service = new Service(); rumService.id = app.id!; rumService.name = app.name || ""; return rumService; })]);'
+          done
+
           export HOME=$NIX_BUILD_TOP/home
           export npm_config_cache=$NIX_BUILD_TOP/npm-cache
           mkdir -p $HOME $npm_config_cache
