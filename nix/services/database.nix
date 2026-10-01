@@ -86,6 +86,27 @@
               };
             }
           ))
+          (lib.mkIf config.services.clickhouse."database:clickhouse".enable (
+            with config.services.clickhouse."database:clickhouse";
+            {
+              # services-flake creates these against a short-lived server of its
+              # own, five seconds after starting it, which Keeper's leader
+              # election outruns. Use the real server once it reports healthy.
+              "database:clickhouse".depends_on = lib.mkForce { };
+              "database:clickhouse-init" = {
+                depends_on."database:clickhouse".condition = "process_healthy";
+                command = lib.mkForce (
+                  pkgs.writeShellApplication {
+                    name = "clickhouse-init";
+                    runtimeInputs = [ package ];
+                    text = lib.concatMapStrings (database: ''
+                      clickhouse-client --port ${toString port} --query "CREATE DATABASE IF NOT EXISTS ${database.name}"
+                    '') initialDatabases;
+                  }
+                );
+              };
+            }
+          ))
         ];
       };
     };

@@ -236,7 +236,10 @@
           depends_on = {
             "database:postgresql".condition = "process_healthy";
             "database:redis".condition = "process_healthy";
-            "database:clickhouse".condition = "process_healthy";
+            # The init creates the oneuptime database, and only runs once
+            # clickhouse is healthy, so waiting on clickhouse itself would still
+            # race the CREATE DATABASE.
+            "database:clickhouse-init".condition = "process_completed_successfully";
           };
         };
 
