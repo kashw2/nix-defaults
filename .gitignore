@@ -2,3 +2,7 @@ data/
 data-compactor/
 /result*
 /.pre-commit-config.yaml
+# Generated specs and implementation plans, plus agent scratch state.
+# Untracked by intent; ignored so they cannot be swept in by `git add -A`.
+/docs/superpowers/
+/.superpowers/
