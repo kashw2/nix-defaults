@@ -1,5 +1,4 @@
 {
-  pkgs,
   lib,
   name,
   config,
@@ -45,42 +44,24 @@
 
   config.outputs.settings.processes = {
     "${name}-migrate" = {
-      environment =
-        config.package.passthru.runtimeEnv
-        // {
-          NODE_OPTIONS = "--max-old-space-size=8096 --max-http-header-size=8388608";
-        }
-        // config.extraEnvironment;
+      environment = {
+        NODE_OPTIONS = "--max-old-space-size=8096 --max-http-header-size=8388608";
+      }
+      // config.extraEnvironment;
 
-      command = pkgs.writeShellApplication {
-        name = "oneuptime-migrate";
-        runtimeInputs = [ pkgs.nodejs_26 ];
-        text = ''
-          cd ${config.package}/app
-          exec node --no-node-snapshot --require ts-node/register Migrate.ts
-        '';
-      };
+      command = "${config.package}/bin/oneuptime-app-migrate";
 
       availability.restart = "exit_on_failure";
     };
 
     "${name}" = {
-      environment =
-        config.package.passthru.runtimeEnv
-        // {
-          PORT = toString config.port;
-          NODE_OPTIONS = "--max-old-space-size=8096";
-        }
-        // config.extraEnvironment;
+      environment = {
+        PORT = toString config.port;
+        NODE_OPTIONS = "--max-old-space-size=8096";
+      }
+      // config.extraEnvironment;
 
-      command = pkgs.writeShellApplication {
-        name = "oneuptime-app";
-        runtimeInputs = [ pkgs.nodejs_26 ];
-        text = ''
-          cd ${config.package}/app
-          exec node --no-node-snapshot --require ts-node/register Index.ts
-        '';
-      };
+      command = lib.getExe config.package;
 
       depends_on."${name}-migrate".condition = "process_completed_successfully";
 

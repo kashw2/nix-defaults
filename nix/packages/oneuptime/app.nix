@@ -3,170 +3,129 @@
   perSystem =
     { pkgs, ... }:
     {
-      packages.oneuptime-app = pkgs.stdenv.mkDerivation (finalAttrs: {
+      packages.oneuptime-app = pkgs.buildNpmPackage (finalAttrs: {
         pname = "oneuptime-app";
-        inherit (config.flake.lib.oneuptime pkgs) version;
+        inherit (config.flake.lib.oneuptime pkgs) version src;
 
-        src = pkgs.stdenv.mkDerivation (_: {
-          pname = "oneuptime-app-node-modules";
-          inherit (finalAttrs) version;
-          inherit (config.flake.lib.oneuptime pkgs) src;
+        __structuredAttrs = true;
 
-          nativeBuildInputs = [ pkgs.nodejs_26 ];
+        sourceRoot = "${finalAttrs.src.name}/packages/App";
 
-          dontConfigure = true;
-          dontFixup = true;
+        nodejs = pkgs.nodejs_26;
 
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-          NODE_EXTRA_CA_CERTS = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-          npm_config_progress = "false";
+        npmDepsHash = "sha256-tmU0Q1ETPqkrZPr3uATZshhtrhfqoSve06V4tzT2hEE=";
 
-          buildPhase = ''
-            runHook preBuild
+        nativeBuildInputs = [ pkgs.makeWrapper ];
 
-            export HOME=$NIX_BUILD_TOP/home
-            export npm_config_cache=$NIX_BUILD_TOP/npm-cache
-            mkdir -p $HOME $npm_config_cache
+        postPatch = ''
+          # unpackPhase only makes sourceRoot writable, and Common sits outside it.
+          chmod -R u+w ..
 
-            for tree in \
-              Common \
-              App \
-              App/FeatureSet/Accounts \
-              App/FeatureSet/Dashboard \
-              App/FeatureSet/AdminDashboard \
-              App/FeatureSet/StatusPage \
-              App/FeatureSet/PublicDashboard \
-              App/FeatureSet/BrowserRecorder; do
-              ( cd $tree && npm ci --no-audit --no-fund --ignore-scripts )
-            done
-
-            rm -rf $npm_config_cache $HOME
-            find . -type d -name _logs -prune -exec rm -rf {} +
-            find . -type d -name .npm -prune -exec rm -rf {} +
-            find . -name 'npm-debug.log*' -delete
-
-            runHook postBuild
-          '';
-
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out
-            cp -a Common $out/Common
-            cp -a App $out/App
-            runHook postInstall
-          '';
-
-          outputHashMode = "recursive";
-          outputHashAlgo = "sha256";
-          outputHash = "sha256-Lf+GEj/7LinIut02WYpStjAzQ5OBne+gAsNoaw7txIk=";
-        });
-
-        nativeBuildInputs = [
-          pkgs.nodejs_26
-          pkgs.nodejs_26.passthru.python
-        ];
-
-        unpackPhase = ''
-          runHook preUnpack
-          cp -a "$src" source
-          chmod -R u+w source
-          cd source
-          runHook postUnpack
-        '';
-
-        dontConfigure = true;
-
-        PRODUCTION = "true";
-        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-        npm_config_foreground_scripts = "true";
-        npm_config_offline = "true";
-        npm_config_nodedir = "${pkgs.nodejs_26}";
-
-        preBuild = ''
-          find App Common -type f \( -name '*.ts' -o -name '*.ejs' \) \
-            -not -path '*/node_modules/*' -not -path '*/Tests/*' \
-            -exec sed -i "s#/usr/src/app#$out/app#g; s#/usr/src/Common#$out/Common#g" {} +
-
-          substituteInPlace App/FeatureSet/Dashboard/src/Components/SessionReplay/ReplayStage.tsx \
+          substituteInPlace FeatureSet/Dashboard/src/Components/SessionReplay/ReplayStage.tsx \
             --replace-fail "img-src data: blob:;" "img-src data: blob: http: https:;"
 
-          substituteInPlace App/FeatureSet/Telemetry/Services/OtelProfilesIngestService.ts \
+          substituteInPlace FeatureSet/Telemetry/Services/OtelProfilesIngestService.ts \
             --replace-fail 'const date: Date = OneUptimeDate.fromUnixNano(numericValue);' 'let date: Date = OneUptimeDate.fromUnixNano(numericValue); if (Number.isNaN(date.getTime())) { numericValue = OneUptimeDate.getCurrentDateAsUnixNano(); date = OneUptimeDate.fromUnixNano(numericValue); }'
 
-          substituteInPlace App/FeatureSet/Telemetry/Services/PyroscopeIngestService.ts \
-            --replace-fail '? fromSeconds * 1_000_000_000' '? (fromSeconds >= 1e15 ? fromSeconds : fromSeconds * 1_000_000_000)' \
-            --replace-fail '? untilSeconds * 1_000_000_000' '? (untilSeconds >= 1e15 ? untilSeconds : untilSeconds * 1_000_000_000)'
+          substituteInPlace FeatureSet/Dashboard/src/Components/Exceptions/ExceptionsDashboard.tsx \
+            --replace-fail 'import Service from "Common/Models/DatabaseModels/Service";' 'import Service from "Common/Models/DatabaseModels/Service"; import RumApplication from "Common/Models/DatabaseModels/RumApplication";' \
+            --replace-fail 'setServices(result.data);' 'const rumResult: ListResult<RumApplication> = await ModelAPI.getList<RumApplication>({ modelType: RumApplication, query: { projectId: ProjectUtil.getCurrentProjectId()! }, select: { _id: true, name: true }, sort: { name: SortOrder.Ascending }, skip: 0, limit: LIMIT_PER_PROJECT }); setServices([...result.data, ...rumResult.data.map((app: RumApplication): Service => { const rumService: Service = new Service(); rumService.id = app.id!; rumService.name = app.name || ""; return rumService; })]);'
 
-          for exceptionsView in \
-            App/FeatureSet/Dashboard/src/Components/Exceptions/ExceptionsDashboard.tsx \
-            App/FeatureSet/Dashboard/src/Components/Exceptions/ExceptionsTable.tsx
-          do
-            substituteInPlace "$exceptionsView" \
-              --replace-fail 'import Service from "Common/Models/DatabaseModels/Service";' 'import Service from "Common/Models/DatabaseModels/Service"; import RumApplication from "Common/Models/DatabaseModels/RumApplication";' \
-              --replace-fail 'setServices(result.data);' 'const rumResult: ListResult<RumApplication> = await ModelAPI.getList<RumApplication>({ modelType: RumApplication, query: { projectId: ProjectUtil.getCurrentProjectId()! }, select: { _id: true, name: true }, sort: { name: SortOrder.Ascending }, skip: 0, limit: LIMIT_PER_PROJECT }); setServices([...result.data, ...rumResult.data.map((app: RumApplication): Service => { const rumService: Service = new Service(); rumService.id = app.id!; rumService.name = app.name || ""; return rumService; })]);'
-          done
-
-          export HOME=$NIX_BUILD_TOP/home
-          export npm_config_cache=$NIX_BUILD_TOP/npm-cache
-          mkdir -p $HOME $npm_config_cache
-
-          for tree in \
-            Common \
-            App \
-            App/FeatureSet/Accounts \
-            App/FeatureSet/Dashboard \
-            App/FeatureSet/AdminDashboard \
-            App/FeatureSet/StatusPage \
-            App/FeatureSet/PublicDashboard \
-            App/FeatureSet/BrowserRecorder; do
-            (
-              cd $tree
-              patchShebangs node_modules
-              npm rebuild --no-audit --no-fund
-              patchShebangs node_modules
-            )
-          done
-
-          for tree in \
-            App/FeatureSet/Accounts \
-            App/FeatureSet/Dashboard \
-            App/FeatureSet/AdminDashboard \
-            App/FeatureSet/StatusPage \
-            App/FeatureSet/PublicDashboard \
-            App/FeatureSet/BrowserRecorder; do
-            if ! npm --prefix $tree ls --depth=0 > /dev/null; then
-              exit 1
-            fi
-          done
+          # ExceptionsViewer loads its five model lists in one Promise.all, so the
+          # RUM applications are fetched alongside it rather than in place of it.
+          substituteInPlace FeatureSet/Dashboard/src/Components/Exceptions/ExceptionsViewer.tsx \
+            --replace-fail 'import Service from "Common/Models/DatabaseModels/Service";' 'import Service from "Common/Models/DatabaseModels/Service"; import RumApplication from "Common/Models/DatabaseModels/RumApplication";' \
+            --replace-fail 'setServices(serviceResult.data || []);' 'const rumResult: ModelListResult<RumApplication> = await ModelAPI.getList<RumApplication>({ modelType: RumApplication, query: { projectId }, limit: LIMIT_PER_PROJECT, skip: 0, select: { _id: true, name: true }, sort: { name: SortOrder.Ascending } }); setServices([...(serviceResult.data || []), ...(rumResult.data || []).map((app: RumApplication): Service => { const rumService: Service = new Service(); rumService.id = app.id!; rumService.name = app.name || ""; return rumService; })]);'
         '';
 
-        buildPhase = ''
-          runHook preBuild
-          cd App
-          export GIT_SHA=${finalAttrs.version}
-          export APP_VERSION=${finalAttrs.version}
-          npm run build-frontends:prod
-          npm run compile
-          cd -
-          runHook postBuild
+        # Common and the six frontends are separate npm projects that depend on
+        # each other by path, so each needs its own deps.
+        preBuild = pkgs.lib.concatLines (
+          pkgs.lib.mapAttrsToList
+            (dir: deps: ''
+              (
+                cd ../${dir}
+                # npmConfigHook requires both lockfiles to be identical, so take the
+                # repaired one back out of the fetched deps.
+                cp ${deps}/package-lock.json package-lock.json
+                export npmDeps=${deps}
+                npmConfigHook
+              )
+            '')
+            (
+              builtins.mapAttrs
+                (
+                  dir: hash:
+                  pkgs.fetchNpmDeps {
+                    name = "oneuptime-${pkgs.lib.toLower (baseNameOf dir)}-npm-deps-${finalAttrs.version}";
+                    src = "${finalAttrs.src}/packages/${dir}";
+                    # Upstream ships some of these lockfiles without `resolved`/`integrity` on a chunk of their entries, which cannot be fetched
+                    nativeBuildInputs = [ pkgs.npm-lockfile-fix ];
+                    preBuild = "npm-lockfile-fix package-lock.json";
+                    inherit hash;
+                  }
+                )
+                {
+                  "Common" = "sha256-TuFMlTUbWKlqLmm4nDR0Nxye2w0acmngFDFvfXkmkIQ=";
+                  "App/FeatureSet/Accounts" = "sha256-s3FMX9Q18ul+9Mozi6bCbjh+XJuLBSxVAWEflftB62c=";
+                  "App/FeatureSet/AdminDashboard" = "sha256-2tecXiNkajkuyp95QdEvHtYi3a/5P7SK7bD+3dMDT/4=";
+                  "App/FeatureSet/BrowserRecorder" = "sha256-2ySF3/FNe4Om1g/8q4N+Ws9IcumS64/IUuKoiLqJFAI=";
+                  "App/FeatureSet/Dashboard" = "sha256-ZTx1mqBlB8ewzLCzPdgPxTGguEPLbJ/NaKR6O/fs2sQ=";
+                  "App/FeatureSet/PublicDashboard" = "sha256-ZWqJJd5d+MrzafhriFSBcGfrWYCaudyQ623N4VFcKhU=";
+                  "App/FeatureSet/StatusPage" = "sha256-Khlu2UFugyhEcROuREucPmaK+Rc9ft/kfvAeI4Z9C3I=";
+                }
+            )
+        );
+
+        npmBuildScript = "build-frontends:prod";
+
+        # The Dashboard service worker bakes both into its cache key at build time,
+        # falling back to md5(Date.now()), which would make $out unreproducible.
+        env = {
+          GIT_SHA = finalAttrs.version;
+          APP_VERSION = finalAttrs.version;
+        };
+
+        postBuild = ''
+          # The same generator stamps a wall-clock timestamp nothing reads.
+          sed -i 's/^ \* Generated at: .*/ * Generated at: (reproducible build)/' \
+            FeatureSet/Dashboard/public/sw.js
         '';
 
         installPhase = ''
           runHook preInstall
-          mkdir -p $out
-          cp -a Common $out/Common
-          cp -a App $out/app
+
+          install -d $out/lib/oneuptime
+          cp -a ../Common $out/lib/oneuptime/Common
+          cp -a . $out/lib/oneuptime/App
+
+          # Some FeatureSets and Common resolve views, assets and docs against the Docker image's WORKDIR rather than their own location.
+          find $out/lib/oneuptime -type f \( -name '*.ts' -o -name '*.ejs' \) \
+            -not -path '*/node_modules/*' -not -path '*/Tests/*' \
+            -exec sed -i \
+              "s#/usr/src/app#$out/lib/oneuptime/App#g; s#/usr/src/Common#$out/lib/oneuptime/Common#g" {} +
+
+          makeWrapper ${pkgs.lib.getExe pkgs.nodejs_26} $out/bin/oneuptime-app \
+            --chdir $out/lib/oneuptime/App \
+            --add-flags "--no-node-snapshot --require ts-node/register $out/lib/oneuptime/App/Index.ts" \
+            --set TS_NODE_TRANSPILE_ONLY 1 \
+            --set PRODUCTION true \
+            --set APP_VERSION ${finalAttrs.version}
+
+          makeWrapper ${pkgs.lib.getExe pkgs.nodejs_26} $out/bin/oneuptime-app-migrate \
+            --chdir $out/lib/oneuptime/App \
+            --add-flags "--no-node-snapshot --require ts-node/register $out/lib/oneuptime/App/Migrate.ts" \
+            --set TS_NODE_TRANSPILE_ONLY 1 \
+            --set PRODUCTION true \
+            --set APP_VERSION ${finalAttrs.version}
+
           runHook postInstall
         '';
 
-        passthru.runtimeEnv = {
-          TS_NODE_TRANSPILE_ONLY = "1";
-          PRODUCTION = "true";
-        };
-
         meta = (config.flake.lib.oneuptime pkgs).meta // {
           description = "OneUptime app monolith — dashboard, API, workers and telemetry ingestion";
+          mainProgram = "oneuptime-app";
+          platforms = pkgs.lib.platforms.linux;
         };
       });
     };

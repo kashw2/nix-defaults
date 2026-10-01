@@ -94,7 +94,7 @@
         admin = {
           name = "OneUptime Admin";
           email = "admin@oneuptime.local";
-          password = "password";
+          password = "oneuptime-local-dev-admin";
         };
 
         extraEnvironment = {

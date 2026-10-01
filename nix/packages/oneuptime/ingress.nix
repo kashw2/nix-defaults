@@ -34,7 +34,7 @@
           export SERVER_NAMES_HASH_MAX_SIZE=2048
 
           sed '/# BEGIN upstream-keepalive/,/# END upstream-keepalive/d' \
-            ${finalAttrs.src}/Nginx/default.conf.template > template
+            ${finalAttrs.src}/packages/Nginx/default.conf.template > template
 
           envsubst "$(grep -oE '\$\{[A-Z_][A-Z0-9_]*\}' template | sort -u | tr '\n' ' ')" \
             < template \
@@ -46,7 +46,7 @@
 
           ! grep -qE '\$\{[A-Z_]' servers.conf
 
-          sed -n '/^http {/,$p' ${finalAttrs.src}/Nginx/nginx.conf \
+          sed -n '/^http {/,$p' ${finalAttrs.src}/packages/Nginx/nginx.conf \
             | sed \
               -e '1d' \
               -e '$d' \
