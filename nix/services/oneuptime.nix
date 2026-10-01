@@ -198,9 +198,20 @@
                 toString config.services.nginx."proxies:nginx".port
               }/status" > /dev/null
 
-              curl -fsSL --max-redirs 3 "http://127.0.0.1:${
+              # Read the page into a variable rather than piping it: a pipe whose
+              # reader stops early leaves curl writing to a closed descriptor,
+              # which pipefail then reports as a failed test.
+              page=$(curl -fsSL --max-redirs 3 "http://127.0.0.1:${
                 toString config.services.nginx."proxies:nginx".port
-              }/accounts" | head -c 15 | grep -qF '<!DOCTYPE html'
+              }/accounts")
+
+              case "$page" in
+                '<!DOCTYPE html'*) ;;
+                *)
+                  echo "proxies-nginx-test: /accounts did not answer with an HTML document" >&2
+                  exit 1
+                  ;;
+              esac
             '';
           };
           depends_on."proxies:nginx".condition = "process_healthy";
