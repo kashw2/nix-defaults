@@ -1,10 +1,8 @@
 {
   defaultPort,
   environment,
-  runtimeInputs ? _: [ ],
 }:
 {
-  pkgs,
   lib,
   name,
   config,
@@ -37,23 +35,14 @@
   };
 
   config.outputs.settings.processes."${name}" = {
-    environment =
-      config.package.passthru.runtimeEnv
-      // {
-        PORT = toString config.port;
-        ONEUPTIME_URL = config.oneuptimeUrl;
-      }
-      // environment name
-      // config.extraEnvironment;
+    environment = {
+      PORT = toString config.port;
+      ONEUPTIME_URL = config.oneuptimeUrl;
+    }
+    // environment name
+    // config.extraEnvironment;
 
-    command = pkgs.writeShellApplication {
-      name = config.package.pname;
-      runtimeInputs = [ pkgs.nodejs_26 ] ++ runtimeInputs pkgs;
-      text = ''
-        cd ${config.package}/app
-        exec node --no-node-snapshot --require ts-node/register Index.ts
-      '';
-    };
+    command = lib.getExe config.package;
 
     readiness_probe = {
       http_get = {
