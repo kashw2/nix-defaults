@@ -18,13 +18,26 @@ self:
               description = "JSON files, one record each.";
             };
 
+            settings = lib.mkOption {
+              type = lib.types.listOf (lib.types.attrsOf (pkgs.formats.json { }).type);
+              default = [ ];
+              description = "Records written inline, one attrset each, written out and appended to `sources`.";
+            };
+
             project = lib.mkOption {
               type = lib.types.nullOr lib.types.str;
               default =
                 if
-                  name == "project" || (builtins.length (config.oneuptime.provisioning.project.sources or [ ])) != 1
+                  name == "project"
+                  ||
+                    (
+                      builtins.length (config.oneuptime.provisioning.project.sources or [ ])
+                      + builtins.length (config.oneuptime.provisioning.project.settings or [ ])
+                    ) != 1
                 then
                   null
+                else if (config.oneuptime.provisioning.project.settings or [ ]) != [ ] then
+                  (builtins.head config.oneuptime.provisioning.project.settings).name
                 else
                   (builtins.fromJSON (
                     builtins.readFile (builtins.head config.oneuptime.provisioning.project.sources)
@@ -50,11 +63,22 @@ self:
     default = { };
     description = ''
       Records to provision, keyed by API path segment: `dashboard` POSTs to
-      /api/dashboard. A `{"$ref": {"kind": _, "name": _}}` anywhere in a record
-      becomes that record's id, and waits for it, so kinds need no order.
+      /api/dashboard. Records come from `settings` written inline, from
+      `sources` read as JSON files, or both. A `{"$ref": {"kind": _, "name": _}}`
+      anywhere in a record becomes that record's id, and waits for it, so kinds
+      need no order.
     '';
     example = {
-      project.sources = [ ./project.json ];
+      project.settings = [ { name = "Default"; } ];
+      monitor = {
+        project = "Default";
+        settings = [
+          {
+            name = "API";
+            monitorType = "Website";
+          }
+        ];
+      };
       dashboard = {
         project = "Default";
         sources = [ ./dashboard.json ];
@@ -78,7 +102,24 @@ self:
 
           ONEUPTIME_PROVISIONING_MANIFEST = "${pkgs.writeText "oneuptime-provisioning.json" (
             builtins.toJSON (
-              lib.mapAttrsToList (kind: entry: entry // { inherit kind; }) config.oneuptime.provisioning
+              lib.mapAttrsToList (
+                kind: entry:
+                builtins.removeAttrs (
+                  entry
+                  // {
+                    inherit kind;
+
+                    sources =
+                      entry.sources
+                      ++ lib.imap0 (
+                        index: record:
+                        (pkgs.formats.json { }).generate "oneuptime-${kind}-${
+                          lib.strings.sanitizeDerivationName (toString (record.${entry.identifier} or index))
+                        }.json" record
+                      ) entry.settings;
+                  }
+                ) [ "settings" ]
+              ) config.oneuptime.provisioning
             )
           )}";
         };

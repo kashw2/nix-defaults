@@ -21,7 +21,10 @@ self:
     lib.mkIf
       (
         config.oneuptime.attachMonitorProbes
-        && (config.oneuptime.provisioning.monitor.sources or [ ]) != [ ]
+        && (
+          (config.oneuptime.provisioning.monitor.sources or [ ]) != [ ]
+          || (config.oneuptime.provisioning.monitor.settings or [ ]) != [ ]
+        )
       )
       (
         with config.services.oneuptime-app."oneuptime:app";
@@ -50,6 +53,9 @@ self:
                 map (
                   src: (builtins.fromJSON (builtins.readFile src)).${config.oneuptime.provisioning.monitor.identifier}
                 ) config.oneuptime.provisioning.monitor.sources
+                ++ map (record: record.${config.oneuptime.provisioning.monitor.identifier}) (
+                  config.oneuptime.provisioning.monitor.settings or [ ]
+                )
               );
             };
 

@@ -73,16 +73,14 @@
 
         telemetry-ingestion-key = {
           createOmit = [ "secretKey" ];
-          sources = [
-            (pkgs.writeText "oneuptime-telemetry-ingestion-key.json" (
-              builtins.toJSON {
-                name = "Default";
-                secretKey = {
-                  _type = "ObjectID";
-                  value = config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey;
-                };
-              }
-            ))
+          settings = [
+            {
+              name = "Default";
+              secretKey = {
+                _type = "ObjectID";
+                value = config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey;
+              };
+            }
           ];
         };
       };
