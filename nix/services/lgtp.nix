@@ -20,11 +20,6 @@
             # default (its internal metastore client hardcodes 9095) and move tempo.
             server.grpc_listen_port = 9097;
             distributor.receivers.otlp.protocols.http.endpoint = "${config.httpAddress}:4318";
-            # TODO: remove once merged: https://github.com/juspay/services-flake/pull/716
-            live_store = {
-              shutdown_marker_dir = "${config.dataDir}/live-store/shutdown-marker";
-              wal.path = "${config.dataDir}/live-store/traces";
-            };
           };
         };
       services.grafana."lgtp:grafana" = {
