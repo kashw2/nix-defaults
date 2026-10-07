@@ -28,6 +28,22 @@
           toString services.openobserve."openobserve".httpPort
         }/api/default/v1/metrics";
       }
+    else if
+      (services.oneuptime-app."oneuptime:app".enable or false)
+      && (services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+    then
+      (otlp: {
+        OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf";
+        OTEL_EXPORTER_OTLP_HEADERS = "x-oneuptime-token=${
+          services.oneuptime-app."oneuptime:app".telemetryIngestionKey
+        }";
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "${otlp}/traces";
+        OTEL_EXPORTER_OTLP_LOGS_ENDPOINT = "${otlp}/logs";
+        OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = "${otlp}/metrics";
+      })
+        "http://${services.oneuptime-app."oneuptime:app".listenAddress}:${
+          toString services.oneuptime-app."oneuptime:app".port
+        }/otlp/v1"
     else
       lib.optionalAttrs
         (

@@ -50,6 +50,10 @@
                   ) "otelcol.exporter.otlphttp.metrics.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.oneuptime-app."oneuptime:app".enable or false)
+                    && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+                  ) "otelcol.exporter.otlphttp.oneuptime.input"
                 )
               }]
               logs    = [${
@@ -58,6 +62,10 @@
                   ) "otelcol.exporter.otlphttp.logs.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.oneuptime-app."oneuptime:app".enable or false)
+                    && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+                  ) "otelcol.exporter.otlphttp.oneuptime.input"
                 )
               }]
               traces  = [${
@@ -66,6 +74,10 @@
                   ) "otelcol.exporter.otlphttp.traces.input"
                   ++ lib.optional (config.services.openobserve."openobserve".enable or false
                   ) "otelcol.exporter.otlphttp.openobserve.input"
+                  ++ lib.optional (
+                    (config.services.oneuptime-app."oneuptime:app".enable or false)
+                    && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+                  ) "otelcol.exporter.otlphttp.oneuptime.input"
                   ++ lib.optional (
                     (config.services.prometheus."lgtp:prometheus".enable or false)
                     || (config.services.openobserve."openobserve".enable or false)
@@ -345,6 +357,64 @@
               }
             ''
           }${
+            lib.concatMapStrings
+              (
+                tail:
+                lib.optionalString tail.enable ''
+
+                  local.file_match "${tail.id}" {
+                    path_targets = [{ __path__ = "${tail.path}" }]
+                  }
+
+                  loki.source.file "${tail.id}" {
+                    targets    = local.file_match.${tail.id}.targets
+                    forward_to = [loki.process.${tail.id}.receiver]
+                  }
+
+                  loki.process "${tail.id}" {
+                    forward_to = [${
+                      lib.concatStringsSep ", " (
+                        lib.optional (config.services.loki."lgtp:loki".enable or false) "loki.write.internal.receiver"
+                        ++ lib.optional (config.services.openobserve."openobserve".enable or false
+                        ) "otelcol.receiver.loki.openobserve_self.receiver"
+                      )
+                    }]
+                    stage.static_labels {
+                      values = {
+                        discipline = "${lib.head (lib.splitString ":" tail.process)}",
+                        service    = "${lib.last (lib.splitString ":" tail.process)}",
+                      }
+                    }
+                  }
+                ''
+              )
+              [
+                {
+                  id = "oneuptime_app";
+                  process = "oneuptime:app";
+                  enable = config.services.oneuptime-app."oneuptime:app".enable or false;
+                  path = config.settings.processes."oneuptime:app".log_location;
+                }
+                {
+                  id = "oneuptime_runner";
+                  process = "oneuptime:runner";
+                  enable = config.services.oneuptime-runner."oneuptime:runner".enable or false;
+                  path = config.settings.processes."oneuptime:runner".log_location;
+                }
+                {
+                  id = "oneuptime_probe";
+                  process = "oneuptime:probe-1";
+                  enable = config.services.oneuptime-probe."oneuptime:probe-1".enable or false;
+                  path = config.settings.processes."oneuptime:probe-1".log_location;
+                }
+                {
+                  id = "proxies_nginx";
+                  process = "proxies:nginx";
+                  enable = config.services.nginx."proxies:nginx".enable or false;
+                  path = config.settings.processes."proxies:nginx".log_location;
+                }
+              ]
+          }${
             lib.optionalString
               (
                 (config.services.prometheus."lgtp:prometheus".enable or false)
@@ -417,25 +487,48 @@
                   }
                 }
               ''
+          }${
+            lib.optionalString
+              (
+                (config.services.oneuptime-app."oneuptime:app".enable or false)
+                && (config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey or null) != null
+              )
+              ''
+
+                otelcol.exporter.otlphttp "oneuptime" {
+                  client {
+                    endpoint = "http://${config.services.oneuptime-app."oneuptime:app".listenAddress}:${
+                      toString config.services.oneuptime-app."oneuptime:app".port
+                    }/otlp"
+                    headers  = { "x-oneuptime-token" = "${
+                      config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey
+                    }" }
+                    tls { insecure = true }
+                  }
+                }
+
+                pyroscope.receive_http "oneuptime" {
+                  http {
+                    listen_address = "${config.services.alloy."telemetry:alloy".listenAddress}"
+                    listen_port    = 4329
+                  }
+                  forward_to = [pyroscope.write.oneuptime.receiver]
+                }
+
+                pyroscope.write "oneuptime" {
+                  endpoint {
+                    url          = "http://${config.services.oneuptime-app."oneuptime:app".listenAddress}:${
+                      toString config.services.oneuptime-app."oneuptime:app".port
+                    }/pyroscope"
+                    bearer_token = "${config.services.oneuptime-app."oneuptime:app".telemetryIngestionKey}"
+                  }
+                }
+              ''
           }
         '';
       };
 
       services.pyroscope."telemetry:pyroscope".enable = true;
-      # TODO: remove once merged: https://github.com/juspay/services-flake/pull/715
-      settings.processes."telemetry:pyroscope".readiness_probe = lib.mkForce {
-        http_get = {
-          host = "127.0.0.1";
-          scheme = "http";
-          port = 4040;
-          path = "/ready";
-        };
-        initial_delay_seconds = 30;
-        period_seconds = 10;
-        timeout_seconds = 2;
-        success_threshold = 1;
-        failure_threshold = 30;
-      };
       services.grafana."lgtp:grafana" = {
         enable = true;
         # Provision the rest of the lgtp stack as grafana data sources. URLs are
