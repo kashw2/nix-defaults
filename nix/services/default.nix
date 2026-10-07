@@ -22,9 +22,11 @@ in
         (
           { config, ... }:
           {
-            # Without setting the addr to the loopback it fails in the nix sandbox
+            # Without setting the addr to the loopback it fails in the nix sandbox.
+            # Use the ingester lifecycler rather than the segment-writer one: the latter
+            # only exists on pyroscope 2.x, while this flag is accepted by both.
             services.pyroscope."telemetry:pyroscope".extraFlags = [
-              "-segment-writer.lifecycler.addr=${config.services.pyroscope."telemetry:pyroscope".httpAddress}"
+              "-ingester.lifecycler.addr=${config.services.pyroscope."telemetry:pyroscope".httpAddress}"
             ];
           }
         )

@@ -4,13 +4,6 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # nixpkgs master lands far more commits than Dependabot's lookback window
-    # covers, so under the default three day cooldown every candidate it sees
-    # is too new and it reports no update rather than paginating back to an
-    # eligible commit. Exempting it keeps the cooldown for the other inputs.
-    cooldown:
-      exclude:
-        - nixpkgs
   - package-ecosystem: github-actions
     directory: /
     schedule:
